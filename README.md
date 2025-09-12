@@ -1,4 +1,4 @@
-# Analytics Engineering BigQuery Assessment
+# Subscription Analytics with BigQuery
 
 This project contains a series of SQL queries and scripts to analyze subscription data in Google BigQuery. The SQL queries cover various analyses, including customer acquisition, churn, upgrades, and downgrades.
 
