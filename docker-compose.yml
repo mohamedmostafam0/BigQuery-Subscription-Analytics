@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  bq-analytics:
+    build: .
+    volumes:
+      - ./data:/app/data
+      - ./.env:/app/.env
+    environment:
+      - GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS}
+    # Mount the service account key if it's a file path
+    # Assuming the key path in .env is relative to the project root or absolute
+    # For Docker, it's best to mount the key file explicitly into the container
+    # Update as needed:
+    # volumes:
+    #   - ./path/to/key.json:/app/key.json

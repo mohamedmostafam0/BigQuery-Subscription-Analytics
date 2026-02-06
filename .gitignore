@@ -1,2 +1,19 @@
+# Environment Variables
 .env
-sunlit-pixel-456910-j0-117c84155518.json
+
+# Google Cloud Keys
+*.json
+!app.json
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+env/
+.env/
+
+# Mac/Linux/Windows
+.DS_Store
+Thumbs.db

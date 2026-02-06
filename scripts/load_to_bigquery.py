@@ -1,22 +1,38 @@
 import sys
 import os
+from pathlib import Path
 from google.cloud import bigquery
+from dotenv import load_dotenv
 
-# Add the parent directory (project root) to sys.path
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+# Get the project root directory (two levels up from this script)
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
+# Load environment variables from .env file in project root
+load_dotenv(PROJECT_ROOT / '.env')
 
 from vars import PROJECT_ID, DATASET_ID
 
 print(f"Project ID: {PROJECT_ID} | Dataset ID: {DATASET_ID}")
 
-# Source CSV files and their corresponding BigQuery table names
+# Define paths relative to project root
 CSV_FILES = {
-    'data/raw/subscriptions.csv': 'raw_subscriptions',
-    'data/raw/updated_subscriptions.csv': 'raw_updated_subscriptions',
+    PROJECT_ROOT / 'data/raw/subscriptions.csv': 'raw_subscriptions',
+    PROJECT_ROOT / 'data/raw/updated_subscriptions.csv': 'raw_updated_subscriptions',
 }
 
+# Define the schema explicitly to ensure data integrity
+# This replaces autodetect=True which can be unreliable
+SUBSCRIPTION_SCHEMA = [
+    bigquery.SchemaField("id", "INTEGER", mode="REQUIRED"),
+    bigquery.SchemaField("user_id", "INTEGER", mode="REQUIRED"),
+    bigquery.SchemaField("start_date", "DATE", mode="REQUIRED"),
+    bigquery.SchemaField("expiry_date", "DATE", mode="NULLABLE"),
+    bigquery.SchemaField("type_id", "INTEGER", mode="REQUIRED"),
+    bigquery.SchemaField("amount", "FLOAT", mode="REQUIRED"),
+]
+
 def load_csv_to_bigquery(file_path, table_name, project_id, dataset_id):
-    """Loads a CSV file into a BigQuery table using the Python client."""
+    """Loads a CSV file into a BigQuery table using the Python client with explicit schema."""
     full_table_id = f"{project_id}.{dataset_id}.{table_name}"
     print(f"Attempting to load {file_path} into BigQuery table: {full_table_id}")
 
@@ -25,7 +41,8 @@ def load_csv_to_bigquery(file_path, table_name, project_id, dataset_id):
     job_config = bigquery.LoadJobConfig(
         source_format=bigquery.SourceFormat.CSV,
         skip_leading_rows=1,   # Assumes CSVs have a header row
-        autodetect=True        # Let BigQuery infer the schema
+        schema=SUBSCRIPTION_SCHEMA, # Use explicit schema
+        write_disposition=bigquery.WriteDisposition.WRITE_TRUNCATE # Overwrite existing table
     )
 
     try:
@@ -46,7 +63,7 @@ def load_csv_to_bigquery(file_path, table_name, project_id, dataset_id):
 
 def main():
     for file_path, table_name in CSV_FILES.items():
-        if not os.path.exists(file_path):
+        if not file_path.exists():
             print(f"⚠️ File not found: {file_path}")
             continue
         load_csv_to_bigquery(file_path, table_name, PROJECT_ID, DATASET_ID)

@@ -1,71 +1,166 @@
-# Subscription Analytics with BigQuery
+# 📊 Subscription Analytics with BigQuery
 
-This project contains a series of SQL queries and scripts to analyze subscription data in Google BigQuery. The SQL queries cover various analyses, including customer acquisition, churn, upgrades, and downgrades.
+A robust Analytics Engineering project designed to ingest, transform, and analyze subscription data using **Google BigQuery** and **Python**. This project demonstrates a production-grade ELT (Extract, Load, Transform) pipeline, handling Type 2 Slowly Changing Dimensions (SCD) and complex user lifecycle metrics.
 
-## Project Structure
+---
 
-```
+## 🚀 Key Features
+
+*   **ELT Pipeline**: Automated ingestion of raw CSV data into BigQuery.
+*   **Data Transformation**: SQL-based merging logic to handle updates and maintain data integrity (Upserts).
+*   **Lifecycle Analysis**: Pre-built queries for acquiring, churning, converting, and retaining users.
+*   **Infrastructure as Code**: Python scripts for orchestration and environment management.
+
+---
+
+## 📂 Project Structure
+
+```bash
 .
-├── analyses/
-│   ├── acquired_users_apr_2025.sql
-│   ├── acquired_users_feb_2025.sql
-│   ├── acquired_users_mar_2025.sql
-│   ├── churned_users_aug_2025.sql
-│   ├── churned_users_oct_2025.sql
-│   ├── churned_users_sep_2025.sql
-│   ├── converted_users_apr_2025.sql
-│   ├── converted_users_jun_2025.sql
-│   ├── converted_users_may_2025.sql
-│   ├── downgraded_users_apr_2025.sql
-│   ├── downgraded_users_jun_2025.sql
-│   ├── downgraded_users_may_2025.sql
-│   ├── upgraded_users_apr_2025.sql
-│   ├── upgraded_users_jun_2025.sql
-│   └── upgraded_users_may_2025.sql
-├── data/
-│   └── raw/
-│       ├── subscriptions.csv
-│       └── updated_subscriptions.csv
-├── models/
+├── analyses/               # 📈 SQL scripts for business intelligence queries
+│   ├── acquired_users_*.sql
+│   ├── churned_users_*.sql
+│   └── ...
+├── data/raw/              # 💾 Raw data source (CSV)
+│   ├── subscriptions.csv
+│   └── updated_subscriptions.csv
+├── models/                # 🛠️ Data transformation models (DML)
 │   └── merge_subscriptions.sql
-├── scripts/
+├── scripts/               # 🐍 Python automation scripts
 │   ├── load_to_bigquery.py
 │   └── run_query.py
-├── .gitignore
-├── README.md
-└── vars.py
+├── .env.example           # 🔒 Environment configuration template
+├── requirements.txt       # 📦 Python dependencies
+├── vars.py                # ⚙️ Configuration management
+└── README.md              # 📖 Project documentation
 ```
 
--   **analyses/**: Contains SQL scripts for various analytical queries.
--   **data/raw/**: Contains the raw subscription data in CSV format.
--   **models/**: Contains SQL models for data transformation.
--   **scripts/**: Contains Python scripts to interact with BigQuery.
--   **vars.py**: Manages configuration variables for the project.
+---
 
-## Setup
+## 🛠️ Prerequisites
 
-1.  **Prerequisites**:
-    *   Python 3.x
-    *   Google Cloud SDK installed and authenticated.
-    *   A Google Cloud project with BigQuery enabled.
+Before you begin, ensure you have the following:
 
-2.  **Configuration**:
-    *   Create a `.env` file in the root of the project.
-    *   Add the following environment variables to the `.env` file:
-        ```
-        PROJECT_ID=<your-gcp-project-id>
-        DATASET_ID=<your-bigquery-dataset-id>
-        GOOGLE_APPLICATION_CREDENTIALS=<path-to-your-service-account-key.json>
-        ```
+1.  **Python 3.8+** installed.
+2.  **Google Cloud Platform (GCP)** account with:
+    *   A generic Project created.
+    *   **BigQuery API** enabled.
+    *   A **Service Account** with `BigQuery Admin` or `BigQuery Data Editor` and `BigQuery Job User` roles.
+    *   A JSON key file for the service account.
 
-## How to Run a SQL Query
+---
 
-To run a SQL query from the `analyses` directory, use the `run_query.py` script.
+## ⚙️ Setup & Installation
 
-**Example:**
+### 1. Clone the Repository
+```bash
+git clone <repository-url>
+cd BigQuery-Subscription-Analytics
+```
 
+### 2. Install Dependencies
+It's recommended to use a virtual environment.
+```bash
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+pip install -r requirements.txt
+```
+
+### 3. Configure Environment
+Create a `.env` file in the root directory (copy from `.env.example` if available) and populate it with your GCP credentials.
+
+```ini
+# .env
+PROJECT_ID=your-gcp-project-id
+DATASET_ID=your_bigquery_dataset_id
+GOOGLE_APPLICATION_CREDENTIALS="path/to/your/service-account-key.json"
+```
+
+> **Note**: Ensure your `DATASET_ID` exists in BigQuery or the scripts have permission to create it (current scripts assume existence).
+
+---
+
+## 🏃 Usage Guide
+
+### Step 1: Ingest Data (Extract & Load)
+Load the raw CSV files (`subscriptions.csv`, `updated_subscriptions.csv`) into BigQuery. This script autodetects schemas and handles loading.
+
+```bash
+python scripts/load_to_bigquery.py
+```
+*   **Output**: Creates/Overwrites `raw_subscriptions` and `raw_updated_subscriptions` tables in your specified dataset.
+
+### Step 2: Transform Data (Merge/Upsert)
+Apply updates from `raw_updated_subscriptions` to the main `raw_subscriptions` table using the MERGE model. This handles new records and updates existing ones.
+
+```bash
+python scripts/run_query.py --sql_file models/merge_subscriptions.sql
+```
+
+### Step 3: Run Analysis
+Execute analytical queries to derive insights. The `run_query.py` script dynamically injects your dataset ID into the SQL templates.
+
+**Example: Analyze Churned Users in August 2025**
+```bash
+python scripts/run_query.py --sql_file analyses/churned_users_aug_2025.sql
+```
+
+**Example: Analyze Acquired Users**
 ```bash
 python scripts/run_query.py --sql_file analyses/acquired_users_apr_2025.sql
 ```
 
-This command will execute the specified SQL file against the `raw_subscriptions` table in your BigQuery dataset.
+---
+
+## 🧠 Architecture & Logic
+
+### Data Flow
+1.  **Raw Layer**: Data lands in CSV format in `data/raw`.
+2.  **Staging Layer**: `load_to_bigquery.py` loads these directly to BigQuery tables (`raw_...`).
+3.  **Transformation Layer**: `merge_subscriptions.sql` performs a `MERGE` operation:
+    *   **MATCH**: Updates attributes (Start Date, Expiry, Type, Amount) for existing users.
+    *   **NOT MATCH**: Inserts new user records.
+4.  **Analysis Layer**: SQL queries in `analyses/` read from the consolidated `raw_subscriptions` table to calculate metrics.
+
+### Key Metrics
+*   **Acquisition**: New users starting subscriptions in a given month.
+*   **Churn**: Users active in the previous month but not the current month.
+*   **Upgrades/Downgrades**: Changes in subscription tiers (TBD in analysis SQLs).
+
+---
+
+## 🤝 Contributing
+
+1.  Fork the repository.
+2.  Create a feature branch (`git checkout -b feature/amazing-feature`).
+3.  Commit your changes (`git commit -m 'Add some amazing feature'`).
+4.  Push to the branch (`git push origin feature/amazing-feature`).
+5.  Open a Pull Request.
+
+---
+
+## 🐳 Running with Docker
+
+To run the project in a containerized environment (recommended):
+
+1.  **Build the Image**:
+    ```bash
+    docker build -t bq-analytics .
+    ```
+
+2.  **Run Data Load**:
+    ```bash
+    docker run --env-file .env -v $(pwd)/data:/app/data bq-analytics python -m scripts.load_to_bigquery
+    ```
+    *(Note: Ensure your Service Account key path in `.env` is accessible to the container, or mount it separately)*
+
+3.  **Run Tests**:
+    ```bash
+    docker run --env-file .env bq-analytics python -m scripts.run_tests
+    ```
+
+---
+
+## 📜 License
+
+Distributed under the MIT License. See `LICENSE` for more information.
